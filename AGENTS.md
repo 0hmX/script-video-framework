@@ -1,0 +1,9 @@
+# Project Instructions
+
+- This is a greenfield repository. Do not copy legacy Eui code wholesale.
+- Use Bun exclusively for TypeScript dependencies, scripts, and tests.
+- Use Manim as the only animation engine.
+- Use the tscircuit skill whenever implementing or changing tscircuit integration.
+- Technical circuit visuals must come from verified tscircuit exports unless illustration is explicitly requested.
+- Keep overlay typography monochrome and the visual-tool vocabulary small.
+- Do not add publishing, YouTube upload, GUI automation, or code-diff animation.
