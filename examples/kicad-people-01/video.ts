@@ -23,6 +23,7 @@ const terminalCaptures: Record<TerminalCapture, Visual[]> = {
 }
 
 function visualsFor(plan: EpisodeVisual): Visual[] {
+  if (plan.type === "continue") return [{ type: "visual.continue" }, { type: "captions" }]
   if (plan.type === "terminal") return terminalCaptures[plan.capture]
   if (plan.type === "editor") {
     return [

@@ -22,6 +22,16 @@ bun run video render examples/board/video.ts
 ./scripts/install-editor-capture-tools.zsh
 ```
 
+To keep the preceding scene's visualization on screen while narration continues, use `visual.continue`. It carries forward the latest non-caption visual stack; captions remain specific to the new scene. An optional `at` or `durationSeconds` on the continuation replaces the previous timing.
+
+```ts
+{
+  id: "explain-result",
+  narration: "Stay on the generated board while we inspect it.",
+  visuals: [{ type: "visual.continue" }, { type: "captions" }],
+}
+```
+
 `video doctor` reports the exact local prerequisites. Builds never download media or prompt for input. See [ARCHITECTURE.md](./ARCHITECTURE.md) for package boundaries and [docs/limitations.md](./docs/limitations.md) for current limitations.
 
 The implementation brief is preserved in [PROJECT_PROMPT.md](./PROJECT_PROMPT.md). This repository does not inherit from or depend on Eui.
