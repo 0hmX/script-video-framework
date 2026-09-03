@@ -91,7 +91,7 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
       const id = visual.id ?? visual.source
       const sourcePath = resolve(projectDir, visual.source)
       const bytes = await Bun.file(sourcePath).arrayBuffer()
-      const key = contentKey("asset-1", { visual, sourceHash: new Bun.CryptoHasher("sha256").update(bytes).digest("hex") })
+      const key = contentKey("asset-2", { visual, sourceHash: new Bun.CryptoHasher("sha256").update(bytes).digest("hex") })
       const stage = `asset-${contentKey("id", id).slice(0, 12)}`
       let assetRecord = !options.force ? await cache.fresh(stage, key) : undefined
       let generated = assetRecord?.outputs[0]
@@ -161,10 +161,10 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
       stageRecords.push(captureRecord)
 
       const previewId = `${visual.id}:preview`
-      const previewVisual = { id: previewId, type: "tscircuit.board" as const, source: visual.preview.source, view: visual.preview.view }
+      const previewVisual = { id: previewId, type: "tscircuit.board" as const, source: visual.preview.source, view: visual.preview.view, motion: "none" as const }
       const previewPath = resolve(projectDir, previewVisual.source)
       const previewBytes = await Bun.file(previewPath).arrayBuffer()
-      const previewKey = contentKey("editor-preview-1", { visual: previewVisual, sourceHash: new Bun.CryptoHasher("sha256").update(previewBytes).digest("hex") })
+      const previewKey = contentKey("editor-preview-2", { visual: previewVisual, sourceHash: new Bun.CryptoHasher("sha256").update(previewBytes).digest("hex") })
       const stage = `asset-${contentKey("id", previewId).slice(0, 12)}`
       let previewRecord = !options.force ? await cache.fresh(stage, previewKey) : undefined
       let generated = previewRecord?.outputs[0]
@@ -221,7 +221,7 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
 
   let finalVideo: string | undefined
   if (options.render) {
-    const renderKey = contentKey("render-1", { prepareKey, renderer: "manim-jsonl-19" })
+    const renderKey = contentKey("render-1", { prepareKey, renderer: "manim-jsonl-22" })
     let renderRecord = !options.force ? await cache.fresh("render", renderKey) : undefined
     if (!renderRecord) { await new ManimRenderer().render(renderRequestSchema.parse(request)); renderRecord = await cache.write("render", renderKey, { prepare: prepareKey }, [silentPath]) }
     stageRecords.push(renderRecord)

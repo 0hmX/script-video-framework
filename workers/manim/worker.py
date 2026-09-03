@@ -24,6 +24,7 @@ def validate(req):
 def render(req):
     try:
         from manim import config, Scene, Text, ImageMobject, Line, Arrow, Group, VGroup, RoundedRectangle, Rectangle, Circle, ValueTracker, WHITE, GREY_B, DOWN, UP
+        from PIL import Image, ImageChops
     except Exception as exc:
         raise RuntimeError("Manim Community is unavailable; install it in MANIM_PYTHON") from exc
 
@@ -47,6 +48,24 @@ def render(req):
     assets = req.get("assets", {})
     segment_dir = tempfile.mkdtemp(prefix="script-video-manim-")
     segments = []
+    trimmed_paths = {}
+
+    def trim_generated_image(path):
+        if path in trimmed_paths: return trimmed_paths[path]
+        image = Image.open(path).convert("RGB")
+        background = Image.new("RGB", image.size, image.getpixel((0, 0)))
+        bounds = ImageChops.difference(image, background).getbbox()
+        if not bounds:
+            trimmed_paths[path] = path
+            return path
+        left, top, right, bottom = bounds
+        margin_x = max(12, round((right - left) * 0.08))
+        margin_y = max(12, round((bottom - top) * 0.08))
+        bounds = (max(0, left - margin_x), max(0, top - margin_y), min(image.width, right + margin_x), min(image.height, bottom + margin_y))
+        output = os.path.join(segment_dir, f"trimmed-{len(trimmed_paths)}.png")
+        image.crop(bounds).save(output)
+        trimmed_paths[path] = output
+        return output
 
     class TimelineScene(Scene):
         scene_data = None
@@ -106,9 +125,9 @@ def render(req):
                 if event_type == "caption":
                     if active_caption is not None: self.remove(active_caption)
                     text = " ".join(word["word"] for word in payload)
-                    active_caption = Text(text, font=self.selected_font, font_size=30, color=WHITE)
-                    if active_caption.width > config.frame_width * 0.80: active_caption.scale_to_fit_width(config.frame_width * 0.80)
-                    active_caption.to_edge(DOWN, buff=max(1.0, settings["safeMargin"] / settings["height"] * config.frame_height))
+                    active_caption = Text(text, font=self.selected_font, font_size=19, color=WHITE)
+                    if active_caption.width > config.frame_width * 0.84: active_caption.scale_to_fit_width(config.frame_width * 0.84)
+                    active_caption.to_edge(DOWN, buff=max(0.32, settings["safeMargin"] / settings["height"] * config.frame_height))
                     active_caption.set_z_index(20)
                     self.add(active_caption)
                     frame = event_frame
@@ -128,26 +147,39 @@ def render(req):
                     visual = payload["visual"]
                     if active_editor_id != visual["id"]:
                         if active_editor_shell is not None: self.remove(active_editor_shell)
-                        preview_label = Text("tscircuit preview  •  verified", font=self.selected_mono_font, font_size=17, color=GREY_B).move_to([0, 0.72, 0])
                         preview_path = assets.get(f'{visual["id"]}:preview')
                         if not preview_path or not os.path.isfile(preview_path): raise ValueError(f'missing verified editor preview: {visual["id"]}')
-                        preview = ImageMobject(preview_path).scale_to_fit_width(6.35).move_to([0, -2.2, 0])
-                        if preview.height > 3.75: preview.scale_to_fit_height(3.75)
-                        active_editor_shell = Group(preview_label, preview).set_z_index(7)
+                        landscape = config.frame_width / config.frame_height > 1.3
+                        if landscape:
+                            preview_label = Text("generated PCB  •  checked", font=self.selected_mono_font, font_size=14, color=GREY_B).move_to([2.55, 1.72, 0])
+                            preview = ImageMobject(trim_generated_image(preview_path)).scale_to_fit_width(2.35).move_to([2.55, 0.38, 0])
+                            if preview.height > 2.55: preview.scale_to_fit_height(2.55)
+                            preview_shell = RoundedRectangle(width=2.65, height=3.15, corner_radius=0.10, color=GREY_B).move_to([2.55, 0.38, 0])
+                            active_editor_shell = Group(preview_shell, preview_label, preview).set_z_index(7)
+                        else:
+                            preview_label = Text("generated PCB  •  checked", font=self.selected_mono_font, font_size=17, color=GREY_B).move_to([0, 0.72, 0])
+                            preview = ImageMobject(trim_generated_image(preview_path)).scale_to_fit_width(6.35).move_to([0, -2.2, 0])
+                            if preview.height > 3.75: preview.scale_to_fit_height(3.75)
+                            active_editor_shell = Group(preview_label, preview).set_z_index(7)
                         self.add(active_editor_shell)
                         active_editor_id = visual["id"]
                     if active_editor_buffer is not None: self.remove(active_editor_buffer)
-                    active_editor_buffer = ImageMobject(payload["path"]).scale_to_fit_width(7.2).move_to([0, 3.3, 0]).set_z_index(9)
-                    if active_editor_buffer.height > 3.8: active_editor_buffer.scale_to_fit_height(3.8)
+                    landscape = config.frame_width / config.frame_height > 1.3
+                    if landscape:
+                        active_editor_buffer = ImageMobject(payload["path"]).scale_to_fit_width(5.0).move_to([-1.35, 0.48, 0]).set_z_index(9)
+                        if active_editor_buffer.height > 3.35: active_editor_buffer.scale_to_fit_height(3.35)
+                    else:
+                        active_editor_buffer = ImageMobject(payload["path"]).scale_to_fit_width(7.2).move_to([0, 3.3, 0]).set_z_index(9)
+                        if active_editor_buffer.height > 3.8: active_editor_buffer.scale_to_fit_height(3.8)
                     self.add(active_editor_buffer)
                     frame = event_frame
                     continue
                 if event_type == "terminal_capture":
                     if active_terminal_frame is not None: self.remove(active_terminal_frame)
                     landscape = config.frame_width / config.frame_height > 1.3
-                    terminal_y = 0.25 if landscape else 0.65
-                    terminal_max_height = config.frame_height * (0.68 if landscape else 0.62)
-                    active_terminal_frame = ImageMobject(payload["path"]).scale_to_fit_width(config.frame_width * 0.90)
+                    terminal_y = 0.55 if landscape else 0.65
+                    terminal_max_height = config.frame_height * (0.80 if landscape else 0.62)
+                    active_terminal_frame = ImageMobject(payload["path"]).scale_to_fit_width(config.frame_width * 0.94)
                     if active_terminal_frame.height > terminal_max_height:
                         active_terminal_frame.scale_to_fit_height(terminal_max_height)
                     active_terminal_frame.move_to([0, terminal_y, 0]).set_z_index(9)
@@ -171,7 +203,12 @@ def render(req):
                     key = visual.get("id") or visual.get("source")
                     path = assets.get(key)
                     if not path or not os.path.isfile(path): raise ValueError(f"missing verified asset: {key}")
-                    obj = ImageMobject(path).scale_to_fit_width(config.frame_width * 0.78).shift(UP * 0.45)
+                    image_path = trim_generated_image(path) if kind == "tscircuit.board" else path
+                    obj = ImageMobject(image_path).scale_to_fit_width(config.frame_width * 0.84)
+                    if obj.height > config.frame_height * 0.72: obj.scale_to_fit_height(config.frame_height * 0.72)
+                    obj.shift(UP * 0.28)
+                    if kind == "tscircuit.board" and visual.get("motion") == "slow-zoom":
+                        obj.add_updater(lambda mob, dt: mob.scale(1 + 0.0022 * dt))
                 elif kind == "prompt":
                     if visual.get("preset") != "code-to-board": raise ValueError("unsupported prompt preset")
                     tracker = ValueTracker(0)
@@ -192,6 +229,52 @@ def render(req):
                     board_group.add_updater(update_board)
                     self.add(tracker)
                     obj = VGroup(code_lines, board_group).set_z_index(8)
+                elif kind == "illustration.workflow":
+                    clock = ValueTracker(0)
+                    clock.add_updater(lambda mob, dt: mob.increment_value(dt))
+                    self.add(clock)
+                    if visual["variant"] == "kicad-bridge":
+                        sheet = RoundedRectangle(width=2.55, height=2.75, corner_radius=0.10, color=GREY_B).move_to([-2.25, 0.35, 0])
+                        schematic = VGroup(
+                            Line([-3.15, 0.35, 0], [-2.85, 0.35, 0], color=WHITE),
+                            Line([-2.85, 0.35, 0], [-2.70, 0.62, 0], color=WHITE),
+                            Line([-2.70, 0.62, 0], [-2.50, 0.08, 0], color=WHITE),
+                            Line([-2.50, 0.08, 0], [-2.30, 0.62, 0], color=WHITE),
+                            Line([-2.30, 0.62, 0], [-2.10, 0.08, 0], color=WHITE),
+                            Line([-2.10, 0.08, 0], [-1.90, 0.35, 0], color=WHITE),
+                            Line([-1.90, 0.35, 0], [-1.58, 0.35, 0], color=WHITE),
+                            Circle(radius=0.34, color=WHITE).move_to([-2.25, -0.65, 0]),
+                        )
+                        bridge = Arrow([-0.65, 0.35, 0], [0.50, 0.35, 0], buff=0.05, color=GREY_B)
+                        source = RoundedRectangle(width=2.35, height=2.75, corner_radius=0.10, color=WHITE).move_to([2.05, 0.35, 0])
+                        source_lines = VGroup(*[
+                            Line([1.25, y, 0], [2.65 if index % 2 == 0 else 2.35, y, 0], color=GREY_B)
+                            for index, y in enumerate([1.15, 0.75, 0.35, -0.05, -0.45])
+                        ])
+                        left_label = Text("schematic intent", font=self.selected_font, font_size=18, color=GREY_B).move_to([-2.25, -1.35, 0])
+                        right_label = Text("authored source", font=self.selected_font, font_size=18, color=GREY_B).move_to([2.05, -1.35, 0])
+                        groups = [(VGroup(sheet, schematic, left_label), 0.0), (bridge, 0.8), (VGroup(source, source_lines, right_label), 1.5)]
+                    else:
+                        source = RoundedRectangle(width=2.15, height=2.75, corner_radius=0.10, color=WHITE).move_to([-2.35, 0.35, 0])
+                        source_lines = VGroup(*[
+                            Line([-3.05, y, 0], [-1.60 if index % 2 == 0 else -1.85, y, 0], color=GREY_B)
+                            for index, y in enumerate([1.15, 0.75, 0.35, -0.05, -0.45])
+                        ])
+                        bridge = Arrow([-0.95, 0.35, 0], [0.45, 0.35, 0], buff=0.05, color=GREY_B)
+                        board = RoundedRectangle(width=2.75, height=2.35, corner_radius=0.22, color=WHITE).move_to([2.05, 0.35, 0])
+                        pads = VGroup(*[Circle(radius=0.15, color=WHITE).move_to([x, y, 0]) for x, y in [(1.25, 0.85), (1.25, -0.15), (2.00, 0.35), (2.80, 0.85), (2.80, -0.15)]])
+                        traces = VGroup(
+                            Line([1.25, 0.85, 0], [2.00, 0.35, 0], color=GREY_B),
+                            Line([2.00, 0.35, 0], [2.80, 0.85, 0], color=GREY_B),
+                            Line([1.25, -0.15, 0], [2.80, -0.15, 0], color=GREY_B),
+                        )
+                        source_label = Text("TSX", font=self.selected_mono_font, font_size=20, color=GREY_B).move_to([-2.35, -1.35, 0])
+                        board_label = Text("generated hardware", font=self.selected_font, font_size=18, color=GREY_B).move_to([2.05, -1.18, 0])
+                        groups = [(VGroup(source, source_lines, source_label), 0.0), (bridge, 0.8), (VGroup(board, pads, traces, board_label), 1.5)]
+                    for group, start in groups:
+                        group.set_opacity(0)
+                        group.add_updater(lambda mob, dt, reveal=start: mob.set_opacity(min(1.0, max(0.0, (clock.get_value() - reveal) / 0.55))))
+                    obj = VGroup(*(group for group, _ in groups)).set_z_index(8)
                 elif kind in ("geometry.line", "geometry.arrow", "geometry.measurement"):
                     start = [*visual["from"], 0]
                     end = [*visual["to"], 0]
@@ -254,7 +337,7 @@ def main():
             request_id = req.get("requestId", request_id)
             validate(req)
             output = render(req)
-            respond(request_id, True, outputs=[output], metadata={"rendererVersion": "manim-jsonl-19"})
+            respond(request_id, True, outputs=[output], metadata={"rendererVersion": "manim-jsonl-22"})
         except Exception as exc:
             respond(request_id, False, error=str(exc))
 
