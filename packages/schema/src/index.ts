@@ -26,10 +26,21 @@ const editorSessionSchema = z.object({
   }).strict(),
   preview: z.object({ source: localPath, view: z.enum(["pcb", "schematic", "3d"]).default("pcb") }).strict(),
 }).strict()
+const terminalSessionSchema = z.object({
+  ...visualBase,
+  id: z.string().min(1),
+  type: z.literal("terminal.session"),
+  capture: z.object({
+    driver: z.literal("vhs"),
+    tape: localPath,
+    inputs: z.array(localPath).default([]),
+  }).strict(),
+}).strict()
 export const visualSchema = z.discriminatedUnion("type", [
   z.object({ ...visualBase, type: z.literal("text"), text: z.string(), x: z.number().optional(), y: z.number().optional(), role: z.enum(["title", "body", "secondary"]).default("body") }).strict(),
   z.object({ ...visualBase, type: z.literal("code.typewriter"), code: z.string().min(1), language: z.literal("tsx").default("tsx"), typingSeconds: z.number().positive().default(3), x: z.number().optional(), y: z.number().optional() }).strict(),
   editorSessionSchema,
+  terminalSessionSchema,
   z.object({ ...visualBase, type: z.literal("captions") }).strict(),
   z.object({ ...visualBase, type: z.literal("media.image"), source: localPath, fit: z.enum(["contain", "cover"]).default("contain") }).strict(),
   z.object({ ...visualBase, type: z.literal("prompt"), prompt: z.string().min(12), preset: z.literal("code-to-board") }).strict(),

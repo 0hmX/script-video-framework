@@ -7,16 +7,32 @@ import re
 import sys
 from pathlib import Path
 
-def align_words(waveform, sample_rate, display_tokens):
+def speech_chunks(text, max_words=70):
+    tokens = re.findall(r"\S+", text)
+    chunks = []
+    start = 0
+    while start < len(tokens):
+        hard_end = min(len(tokens), start + max_words)
+        end = hard_end
+        if hard_end < len(tokens):
+            sentence_ends = [
+                index + 1
+                for index in range(start + max_words // 2, hard_end)
+                if re.search(r"[.!?][\"')\]]?$", tokens[index])
+            ]
+            if sentence_ends: end = sentence_ends[-1]
+        chunks.append((" ".join(tokens[start:end]), tokens[start:end]))
+        start = end
+    return chunks
+
+def align_words(waveform, sample_rate, display_tokens, bundle, align_model):
     import torch
     import torchaudio
-    model_path = Path(os.environ["TORCH_HOME"]) / "hub" / "checkpoints" / "model.pt"
-    if not model_path.is_file(): raise RuntimeError("missing local torchaudio MMS forced-alignment model")
     normalized = [re.sub(r"[^a-z']", "", token.lower()) for token in display_tokens]
-    if any(not token for token in normalized): raise RuntimeError("narration contains a word unsupported by the initial English aligner")
-    bundle = torchaudio.pipelines.MMS_FA
+    unsupported = [display for display, token in zip(display_tokens, normalized) if not token]
+    if unsupported:
+        raise RuntimeError("narration contains tokens unsupported by the initial English aligner: " + ", ".join(unsupported[:8]))
     audio = torchaudio.functional.resample(waveform.cpu(), sample_rate, bundle.sample_rate)
-    align_model = bundle.get_model(with_star=False).to("cpu")
     with torch.inference_mode(): emission, _ = align_model(audio)
     token_spans = bundle.get_aligner()(emission[0], bundle.get_tokenizer()(normalized))
     seconds_per_emission = audio.shape[-1] / emission.shape[1] / bundle.sample_rate
@@ -47,15 +63,39 @@ def main():
         text = req["text"]
         output = os.path.abspath(req["outputPath"])
         os.makedirs(os.path.dirname(output), exist_ok=True)
-        waveform = model.generate(text)
         sample_rate = model.sr
-        torchaudio.save(output, waveform.cpu(), sample_rate)
-        duration = waveform.shape[-1] / sample_rate
-        tokens = re.findall(r"\S+", text)
+        generated = [
+            (model.generate(chunk_text).cpu(), chunk_tokens)
+            for chunk_text, chunk_tokens in speech_chunks(text)
+        ]
         del model; gc.collect()
         if torch.backends.mps.is_available(): torch.mps.empty_cache()
-        words = align_words(waveform, sample_rate, tokens)
-        print(json.dumps({"audioPath": output, "durationSeconds": duration, "words": words, "providerVersion": "chatterbox-tts-0.1.7-mms-align-1"}), flush=True)
+
+        model_path = Path(os.environ["TORCH_HOME"]) / "hub" / "checkpoints" / "model.pt"
+        if not model_path.is_file(): raise RuntimeError("missing local torchaudio MMS forced-alignment model")
+        bundle = torchaudio.pipelines.MMS_FA
+        align_model = bundle.get_model(with_star=False).to("cpu")
+        pause_samples = round(sample_rate * 0.22)
+        pause = torch.zeros((generated[0][0].shape[0], pause_samples), dtype=generated[0][0].dtype)
+        joined = []
+        words = []
+        offset = 0.0
+        for index, (waveform, tokens) in enumerate(generated):
+            chunk_words = align_words(waveform, sample_rate, tokens, bundle, align_model)
+            words.extend({
+                **word,
+                "startSeconds": word["startSeconds"] + offset,
+                "endSeconds": word["endSeconds"] + offset,
+            } for word in chunk_words)
+            joined.append(waveform)
+            offset += waveform.shape[-1] / sample_rate
+            if index + 1 < len(generated):
+                joined.append(pause)
+                offset += pause_samples / sample_rate
+        waveform = torch.cat(joined, dim=-1)
+        torchaudio.save(output, waveform, sample_rate)
+        duration = waveform.shape[-1] / sample_rate
+        print(json.dumps({"audioPath": output, "durationSeconds": duration, "words": words, "providerVersion": "chatterbox-tts-0.1.7-mms-align-chunked-2"}), flush=True)
 
 if __name__ == "__main__":
     try: main()

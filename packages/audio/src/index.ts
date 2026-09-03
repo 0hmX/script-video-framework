@@ -38,7 +38,7 @@ export class FakeVoiceProvider implements VoiceProvider {
 
 export class ChatterboxVoiceProvider implements VoiceProvider {
   readonly id = "chatterbox"
-  readonly version = "chatterbox-jsonl-2"
+  readonly version = "chatterbox-jsonl-3"
   constructor(private readonly command = process.env.CHATTERBOX_WORKER ?? new URL("../../../scripts/chatterbox-local", import.meta.url).pathname, private readonly worker = new URL("../../../workers/chatterbox/worker.py", import.meta.url).pathname) {}
   async synthesize(request: SynthesisRequest): Promise<SynthesisResult> {
     const args = this.command === "python3" ? [this.worker] : []

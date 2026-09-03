@@ -176,6 +176,38 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
       assets[previewId] = generated
       assetSources[previewId] = previewKey
       stageRecords.push(previewRecord!)
+      continue
+    }
+    if (visual.type === "terminal.session") {
+      const captureId = `${visual.id}:capture`
+      const tapePath = resolve(projectDir, visual.capture.tape)
+      const captureInputPaths = [tapePath, ...visual.capture.inputs.map(input => resolve(projectDir, input))]
+      const captureInputHashes = await Promise.all(captureInputPaths.map(async path => ({
+        path,
+        sha256: new Bun.CryptoHasher("sha256").update(await Bun.file(path).arrayBuffer()).digest("hex"),
+      })))
+      const captureKey = contentKey("terminal-vhs-1", {
+        capture: visual.capture,
+        inputs: captureInputHashes,
+        runtime: { vhs: "0.11.0", ttyd: "1.7.7" },
+      })
+      const captureStage = `capture-${contentKey("id", visual.id).slice(0, 12)}`
+      const capturePath = resolve(root, "terminal", `${visual.id}.mp4`)
+      let captureRecord = !options.force ? await cache.fresh(captureStage, captureKey) : undefined
+      if (!captureRecord) {
+        await mkdir(resolve(capturePath, ".."), { recursive: true })
+        const toolBin = resolve(projectDir, "..", "..", ".tools", "bin")
+        await runWithRetries([resolve(toolBin, "vhs"), tapePath, "-q", "-o", capturePath], projectDir, {
+          PATH: `${toolBin}:${process.env.PATH ?? ""}`,
+        })
+        captureRecord = await cache.write(captureStage, captureKey, { validate: validateKey }, [capturePath], {
+          driver: "vhs",
+          vhsVersion: "0.11.0",
+        })
+      }
+      assets[captureId] = capturePath
+      assetSources[captureId] = captureKey
+      stageRecords.push(captureRecord)
     }
   }
 
@@ -189,7 +221,7 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
 
   let finalVideo: string | undefined
   if (options.render) {
-    const renderKey = contentKey("render-1", { prepareKey, renderer: "manim-jsonl-17" })
+    const renderKey = contentKey("render-1", { prepareKey, renderer: "manim-jsonl-19" })
     let renderRecord = !options.force ? await cache.fresh("render", renderKey) : undefined
     if (!renderRecord) { await new ManimRenderer().render(renderRequestSchema.parse(request)); renderRecord = await cache.write("render", renderKey, { prepare: prepareKey }, [silentPath]) }
     stageRecords.push(renderRecord)

@@ -2,7 +2,7 @@ import { access } from "node:fs/promises"
 import { PROTOCOL_VERSION, renderRequestSchema, workerResponseSchema, type RenderRequest } from "@script-video/schema"
 
 export class ManimRenderer {
-  readonly version = "manim-jsonl-17"
+  readonly version = "manim-jsonl-19"
   constructor(private readonly python = process.env.MANIM_PYTHON ?? new URL("../../../.venv/bin/python", import.meta.url).pathname, private readonly worker = new URL("../../../workers/manim/worker.py", import.meta.url).pathname) {}
 
   async render(input: RenderRequest): Promise<string> {

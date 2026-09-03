@@ -67,10 +67,10 @@ def render(req):
                         end = min(len(code), step * chunk_size)
                         event_frame = item["startFrame"] + round((step - 1) * typing_frames / steps)
                         scheduled.append((event_frame, "code", {"text": code[:end], "complete": end == len(code), "visual": visual}))
-                elif visual["type"] == "editor.session":
+                elif visual["type"] in ("editor.session", "terminal.session"):
                     capture_path = assets.get(f'{visual["id"]}:capture')
                     if not capture_path or not os.path.isfile(capture_path):
-                        raise ValueError(f'missing VHS editor capture: {visual["id"]}')
+                        raise ValueError(f'missing VHS capture: {visual["id"]}')
                     frame_dir = tempfile.mkdtemp(prefix="editor-frames-", dir=segment_dir)
                     frame_pattern = os.path.join(frame_dir, "frame-%05d.png")
                     completed = subprocess.run(
@@ -79,12 +79,13 @@ def render(req):
                         text=True,
                     )
                     if completed.returncode != 0:
-                        raise RuntimeError("FFmpeg could not decode VHS editor capture: " + completed.stderr[-1000:])
+                        raise RuntimeError("FFmpeg could not decode VHS capture: " + completed.stderr[-1000:])
                     capture_frames = sorted(os.path.join(frame_dir, name) for name in os.listdir(frame_dir) if name.endswith(".png"))
                     if not capture_frames:
-                        raise ValueError(f'VHS editor capture contains no frames: {visual["id"]}')
+                        raise ValueError(f'VHS capture contains no frames: {visual["id"]}')
+                    capture_event = "editor_capture" if visual["type"] == "editor.session" else "terminal_capture"
                     for index, path in enumerate(capture_frames[:item["durationFrames"]]):
-                        scheduled.append((item["startFrame"] + index, "editor_capture", {"path": path, "visual": visual}))
+                        scheduled.append((item["startFrame"] + index, capture_event, {"path": path, "visual": visual}))
                 elif visual["type"] != "captions": scheduled.append((item["startFrame"], "visual", item))
             if caption_requested:
                 words = scene["words"]
@@ -98,6 +99,7 @@ def render(req):
             active_editor_shell = None
             active_editor_buffer = None
             active_editor_id = None
+            active_terminal_frame = None
             for event_frame, event_type, payload in scheduled:
                 delay = max(0, event_frame - frame) / settings["fps"]
                 if delay: self.wait(delay)
@@ -138,6 +140,18 @@ def render(req):
                     active_editor_buffer = ImageMobject(payload["path"]).scale_to_fit_width(7.2).move_to([0, 3.3, 0]).set_z_index(9)
                     if active_editor_buffer.height > 3.8: active_editor_buffer.scale_to_fit_height(3.8)
                     self.add(active_editor_buffer)
+                    frame = event_frame
+                    continue
+                if event_type == "terminal_capture":
+                    if active_terminal_frame is not None: self.remove(active_terminal_frame)
+                    landscape = config.frame_width / config.frame_height > 1.3
+                    terminal_y = 0.25 if landscape else 0.65
+                    terminal_max_height = config.frame_height * (0.68 if landscape else 0.62)
+                    active_terminal_frame = ImageMobject(payload["path"]).scale_to_fit_width(config.frame_width * 0.90)
+                    if active_terminal_frame.height > terminal_max_height:
+                        active_terminal_frame.scale_to_fit_height(terminal_max_height)
+                    active_terminal_frame.move_to([0, terminal_y, 0]).set_z_index(9)
+                    self.add(active_terminal_frame)
                     frame = event_frame
                     continue
                 item = payload
@@ -240,7 +254,7 @@ def main():
             request_id = req.get("requestId", request_id)
             validate(req)
             output = render(req)
-            respond(request_id, True, outputs=[output], metadata={"rendererVersion": "manim-jsonl-17"})
+            respond(request_id, True, outputs=[output], metadata={"rendererVersion": "manim-jsonl-19"})
         except Exception as exc:
             respond(request_id, False, error=str(exc))
 
