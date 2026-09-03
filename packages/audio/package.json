@@ -1,0 +1,1 @@
+{"name":"@script-video/audio","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@script-video/compiler":"workspace:*","@script-video/schema":"workspace:*"}}

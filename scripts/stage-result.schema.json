@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stage", "status", "summary", "verification", "remainingWork"],
+  "properties": {
+    "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+    "status": { "enum": ["complete", "blocked"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "verification": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "remainingWork": { "type": "array", "items": { "type": "string" } }
+  },
+  "allOf": [{ "if": { "properties": { "status": { "const": "complete" } } }, "then": { "properties": { "remainingWork": { "maxItems": 0 } } } }]
+}

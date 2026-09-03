@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@script-video/assets": ["packages/assets/src/index.ts"],
+      "@script-video/audio": ["packages/audio/src/index.ts"],
+      "@script-video/cli/src/*": ["packages/cli/src/*"],
+      "@script-video/compiler": ["packages/compiler/src/index.ts"],
+      "@script-video/core": ["packages/core/src/index.ts"],
+      "@script-video/renderer": ["packages/renderer/src/index.ts"],
+      "@script-video/renderer-manim": ["packages/renderer-manim/src/index.ts"],
+      "@script-video/schema": ["packages/schema/src/index.ts"]
+    },
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "allowImportingTsExtensions": true,
+    "types": ["bun"],
+    "skipLibCheck": true
+  },
+  "include": ["packages/**/*.ts", "examples/**/*.ts", "tests/**/*.ts"]
+}

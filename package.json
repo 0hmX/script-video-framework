@@ -1,0 +1,31 @@
+{
+  "name": "script-video-framework",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "video": "bun packages/cli/src/bin.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test",
+    "smoke": "RUN_REAL_SMOKE=1 bun test tests/real-smoke.test.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.1.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tscircuit": "^0.0.2461",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@script-video/assets": "workspace:*",
+    "@script-video/audio": "workspace:*",
+    "@script-video/cli": "workspace:*",
+    "@script-video/compiler": "workspace:*",
+    "@script-video/core": "workspace:*",
+    "@script-video/renderer": "workspace:*",
+    "@script-video/renderer-manim": "workspace:*",
+    "@script-video/schema": "workspace:*",
+    "zod": "^3.25.76"
+  }
+}

@@ -1,0 +1,1 @@
+{"name":"@script-video/cli","version":"0.1.0","type":"module","bin":{"video":"./src/bin.ts"},"dependencies":{"@script-video/assets":"workspace:*","@script-video/audio":"workspace:*","@script-video/compiler":"workspace:*","@script-video/renderer":"workspace:*","@script-video/renderer-manim":"workspace:*","@script-video/schema":"workspace:*"}}

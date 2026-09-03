@@ -1,0 +1,7 @@
+#!/bin/zsh
+set -euo pipefail
+root=${0:A:h:h}
+export CHATTERBOX_COMMAND="$root/workers/chatterbox/local_runner"
+export CHATTERBOX_MODEL_DIR="${CHATTERBOX_MODEL_DIR:-$root/.models/chatterbox}"
+export TORCH_HOME="${TORCH_HOME:-$root/.models/torch}"
+exec "$root/.venv-chatterbox/bin/python" "$root/workers/chatterbox/worker.py"
