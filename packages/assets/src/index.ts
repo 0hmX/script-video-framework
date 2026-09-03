@@ -42,7 +42,7 @@ export async function buildTscircuitAsset(projectDir: string, visual: Extract<Vi
   await run(["tsci", "check", "placement", source], projectDir)
   const flag = visual.view === "pcb" ? "--pcb-png" : visual.view === "schematic" ? "--schematic-png" : "--3d-png"
   await run(["tsci", "build", source, flag], projectDir)
-  const dist = resolve(await findPackageRoot(projectDir), "dist")
+  const dist = resolve(await findPackageRoot(dirname(source)), "dist")
   await mkdir(dist, { recursive: true })
   const hints = visual.view === "pcb" ? [".pcb.png", "pcb.png"] : visual.view === "schematic" ? [".schematic.png", "schematic.png"] : [".3d.png", "3d.png"]
   return findGenerated(dist, hints)
