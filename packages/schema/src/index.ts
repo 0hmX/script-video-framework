@@ -37,6 +37,7 @@ const terminalSessionSchema = z.object({
   }).strict(),
 }).strict()
 export const visualSchema = z.discriminatedUnion("type", [
+  z.object({ ...visualBase, type: z.literal("visual.continue") }).strict(),
   z.object({ ...visualBase, type: z.literal("text"), text: z.string(), x: z.number().optional(), y: z.number().optional(), role: z.enum(["title", "body", "secondary"]).default("body") }).strict(),
   z.object({ ...visualBase, type: z.literal("code.typewriter"), code: z.string().min(1), language: z.literal("tsx").default("tsx"), typingSeconds: z.number().positive().default(3), x: z.number().optional(), y: z.number().optional() }).strict(),
   editorSessionSchema,
@@ -58,15 +59,39 @@ export const videoProjectSchema = z.object({
   scenes: z.array(z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/), narration: z.string(), visuals: z.array(visualSchema) }).strict()).min(1),
 }).strict().superRefine((value, ctx) => {
   const ids = new Set<string>()
+  let hasPreviousVisual = false
   for (const [index, scene] of value.scenes.entries()) {
     if (ids.has(scene.id)) ctx.addIssue({ code: "custom", path: ["scenes", index, "id"], message: "scene id must be unique" })
     ids.add(scene.id)
+    const continuations = scene.visuals.filter(visual => visual.type === "visual.continue")
+    const replacements = scene.visuals.filter(visual => visual.type !== "visual.continue" && visual.type !== "captions")
+    if (continuations.length > 1) ctx.addIssue({ code: "custom", path: ["scenes", index, "visuals"], message: "a scene may continue the previous visualization only once" })
+    if (continuations.length && !hasPreviousVisual) ctx.addIssue({ code: "custom", path: ["scenes", index, "visuals"], message: "visual.continue requires an earlier non-caption visualization" })
+    if (continuations.length && replacements.length) ctx.addIssue({ code: "custom", path: ["scenes", index, "visuals"], message: "visual.continue cannot be mixed with a replacement visualization" })
+    if (replacements.length) hasPreviousVisual = true
   }
 })
 
 export type VideoProject = z.input<typeof videoProjectSchema>
 export type ResolvedVideoProject = z.output<typeof videoProjectSchema>
 export type Visual = z.output<typeof visualSchema>
+
+/** Replaces visual.continue directives with the latest non-caption visual stack. */
+export function resolveVisualContinuations(project: ResolvedVideoProject): ResolvedVideoProject {
+  let previous: Visual[] = []
+  return {
+    ...project,
+    scenes: project.scenes.map(scene => {
+      const continuation = scene.visuals.find(visual => visual.type === "visual.continue")
+      const explicit = scene.visuals.filter(visual => visual.type !== "visual.continue")
+      const replacements = explicit.filter(visual => visual.type !== "captions")
+      if (replacements.length) previous = replacements
+      if (!continuation) return scene
+      const carried = previous.map(visual => ({ ...visual, at: continuation.at, durationSeconds: continuation.durationSeconds }))
+      return { ...scene, visuals: [...carried, ...explicit] }
+    }),
+  }
+}
 
 export const alignedWordSchema = z.object({ word: z.string(), startSeconds: z.number().nonnegative(), endSeconds: z.number().nonnegative() }).strict().refine(v => v.endSeconds >= v.startSeconds, "word end must follow start")
 export type AlignedWord = z.infer<typeof alignedWordSchema>

@@ -3,6 +3,7 @@ export type OutputView = "pcb" | "schematic" | "3d"
 export type IllustrationVariant = "kicad-bridge" | "source-to-hardware"
 
 export type EpisodeVisual =
+  | { type: "continue" }
   | { type: "terminal"; capture: TerminalCapture }
   | { type: "editor"; capture: "build-led" }
   | { type: "output"; view: OutputView }
