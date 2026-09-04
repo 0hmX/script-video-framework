@@ -1,0 +1,4 @@
+interface:
+  display_name: "Script Video Authoring"
+  short_description: "Author concise, visual-first videos with this framework"
+  default_prompt: "Use $script-video-authoring to create or revise a video project with short narration beats and purposeful visuals."
