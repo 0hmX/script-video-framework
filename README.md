@@ -35,3 +35,7 @@ To keep the preceding scene's visualization on screen while narration continues,
 `video doctor` reports the exact local prerequisites. Builds never download media or prompt for input. See [ARCHITECTURE.md](./ARCHITECTURE.md) for package boundaries and [docs/limitations.md](./docs/limitations.md) for current limitations.
 
 The implementation brief is preserved in [PROJECT_PROMPT.md](./PROJECT_PROMPT.md). This repository does not inherit from or depend on Eui.
+
+## Campaigns
+
+Campaign `1` is a [vertical, one-minute Shorts series](./campaigns/1/README.md) that teaches tscircuit by progressively building an RP2040 handheld board.
