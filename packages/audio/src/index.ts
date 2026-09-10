@@ -36,25 +36,25 @@ export class FakeVoiceProvider implements VoiceProvider {
   }
 }
 
-export class ChatterboxVoiceProvider implements VoiceProvider {
-  readonly id = "chatterbox"
-  readonly version = "chatterbox-jsonl-3"
-  constructor(private readonly command = process.env.CHATTERBOX_WORKER ?? new URL("../../../scripts/chatterbox-local", import.meta.url).pathname, private readonly worker = new URL("../../../workers/chatterbox/worker.py", import.meta.url).pathname) {}
+export class KokoroVoiceProvider implements VoiceProvider {
+  readonly id = "kokoro"
+  readonly version = "kokoro-0.9.4-native-alignment-1"
+  constructor(private readonly command = process.env.KOKORO_WORKER ?? new URL("../../../scripts/kokoro-local", import.meta.url).pathname, private readonly worker = new URL("../../../workers/kokoro/worker.py", import.meta.url).pathname) {}
   async synthesize(request: SynthesisRequest): Promise<SynthesisResult> {
     const args = this.command === "python3" ? [this.worker] : []
     const proc = Bun.spawn([this.command, ...args], { stdin: "pipe", stdout: "pipe", stderr: "pipe" })
     proc.stdin.write(JSON.stringify({ protocolVersion: PROTOCOL_VERSION, operation: "synthesize", ...request }) + "\n")
     proc.stdin.end()
     const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
-    if (exitCode !== 0) throw new Error(`Chatterbox worker failed: ${stderr.trim()}`)
+    if (exitCode !== 0) throw new Error(`Kokoro worker failed: ${stderr.trim()}`)
     const line = stdout.trim().split("\n").at(-1)
-    if (!line) throw new Error("Chatterbox worker returned no response")
+    if (!line) throw new Error("Kokoro worker returned no response")
     const envelope = workerResponseSchema.parse(JSON.parse(line))
     if (!envelope.ok) throw new Error(envelope.error)
     const metadata = envelope.metadata
     const words = alignedWordSchema.array().parse(metadata.words)
     const durationSeconds = Number(metadata.durationSeconds)
-    if (!Number.isFinite(durationSeconds)) throw new Error("Chatterbox response lacks a valid duration")
+    if (!Number.isFinite(durationSeconds)) throw new Error("Kokoro response lacks a valid duration")
     return { audioPath: envelope.outputs[0]!, words, durationSeconds, providerVersion: String(metadata.providerVersion ?? this.version) }
   }
 }

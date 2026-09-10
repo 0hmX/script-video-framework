@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(cd -- "$(dirname -- "$0")/.." && pwd)"
+uv venv --python 3.11 "$root/.venv-kokoro"
+if [[ "$(uname -s)" == Linux ]]; then
+  uv pip install --python "$root/.venv-kokoro/bin/python" torch --index-url https://download.pytorch.org/whl/cpu
+else
+  uv pip install --python "$root/.venv-kokoro/bin/python" torch
+fi
+uv pip install --python "$root/.venv-kokoro/bin/python" -r "$root/requirements-kokoro.txt"
+uv pip install --python "$root/.venv-kokoro/bin/python" https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+HF_HOME="$root/.models/kokoro" HF_HUB_OFFLINE=0 "$root/.venv-kokoro/bin/python" -c 'from kokoro import KPipeline; p=KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu"); p.load_voice("af_heart")'

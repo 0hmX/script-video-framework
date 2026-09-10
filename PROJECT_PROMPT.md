@@ -12,7 +12,7 @@ The first reference project must explain the tscircuit `<board>` element. It mus
 
 - Use TypeScript and Bun for the public API, compiler, orchestration, cache, CLI, tests, and package management.
 - Use Manim Community as the only animation engine. Run it behind a small, versioned JSON-lines worker boundary so Python remains an implementation detail.
-- Support the existing open-source Chatterbox voice workflow through an isolated local worker. Make voice providers replaceable without changing the compiler.
+- Support the existing open-source Kokoro voice workflow through an isolated local worker. Make voice providers replaceable without changing the compiler.
 - Generate audio before final animation timing. Use word-level alignment to resolve narration cues and captions.
 - Use local, content-addressed caching. A visual-only edit must not regenerate narration.
 - Run headlessly and non-interactively. No GUI automation is part of the build.
@@ -40,7 +40,7 @@ Expose a typed `defineVideo()` API from a small core package. A project should r
 ```ts
 export default defineVideo({
   settings: { width: 1080, height: 1920, fps: 30 },
-  voice: { provider: "chatterbox", voice: "narrator" },
+  voice: { provider: "kokoro", voice: "narrator" },
   scenes: [
     {
       id: "board-size",
@@ -116,13 +116,13 @@ Use a Bun workspace with focused packages:
 packages/schema          strict authored/build schemas
 packages/core            public TypeScript authoring API
 packages/compiler        cues, alignment mapping, frame timeline
-packages/audio           provider interfaces, cache, Chatterbox adapter
+packages/audio           provider interfaces, cache, Kokoro adapter
 packages/assets          local asset policy and tscircuit adapter
 packages/renderer        prepared renderer-independent visual plan
 packages/renderer-manim  Manim worker protocol and process adapter
 packages/cli             commands and resumable build graph
 workers/manim            deterministic Python renderer worker
-workers/chatterbox       isolated local TTS worker
+workers/kokoro       isolated local TTS worker
 examples/board           verified end-to-end reference project
 ```
 
@@ -144,7 +144,7 @@ video doctor
 - `--json` produces stable machine-readable output.
 - Exit `0` on success, `1` for build/runtime failure, and `2` for invalid CLI usage.
 - `inspect` is read-only and explains resolved cues, durations, cache keys, stale stages, and outputs.
-- `doctor` reports Bun, Python, Manim, FFmpeg, font, Chatterbox, and `tsci` availability.
+- `doctor` reports Bun, Python, Manim, FFmpeg, font, Kokoro, and `tsci` availability.
 - Commands must never prompt for input.
 
 ## Codex implementation workflow

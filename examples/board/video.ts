@@ -43,7 +43,7 @@ const boardWithLabel = `export default function BoardElementExample() {
 export default defineVideo({
   title: "The tscircuit board element",
   settings: { width: 2160, height: 3840, fps: 30, safeMargin: 192 },
-  voice: { provider: "chatterbox", voice: "narrator", sampleRate: 24000 },
+  voice: { provider: "kokoro", voice: "narrator", sampleRate: 24000 },
   scenes: [
     {
       id: "board-outline",

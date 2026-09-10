@@ -74,6 +74,6 @@ const scenes: VideoProject["scenes"] = episodeBeats.map(beat => ({
 export default defineVideo({
   title: "tscircuit for KiCad People — Episode 1",
   settings: { width: 1920, height: 1080, fps: 30, safeMargin: 96 },
-  voice: { provider: "chatterbox", voice: "narrator", sampleRate: 24000 },
+  voice: { provider: "kokoro", voice: "narrator", sampleRate: 24000 },
   scenes,
 })

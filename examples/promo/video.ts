@@ -63,7 +63,7 @@ const connectedCircuit = `export default function TextToHardware() {
 export default defineVideo({
   title: "tscircuit — text to hardware",
   settings: { width: 2160, height: 3840, fps: 30, safeMargin: 192 },
-  voice: { provider: "chatterbox", voice: "narrator", sampleRate: 24000 },
+  voice: { provider: "kokoro", voice: "narrator", sampleRate: 24000 },
   scenes: [
     {
       id: "hook",
