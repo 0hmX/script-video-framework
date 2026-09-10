@@ -7,4 +7,4 @@ bun run video validate examples/board/video.ts
 VIDEO_FAKE_VOICE=1 bun run video render examples/board/video.ts
 ```
 
-The fake voice is only for deterministic pipeline development. A release-quality run should configure the local Chatterbox worker described in the root limitations document.
+The fake voice is only for deterministic pipeline development. A release-quality run should configure the local Kokoro worker described in the root limitations document.

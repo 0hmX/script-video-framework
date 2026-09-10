@@ -1,7 +1,7 @@
 import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import { basename, resolve } from "node:path"
 import { buildManifestSchema, compiledSceneSchema, renderRequestSchema, type AlignedWord, type StageRecord } from "@script-video/schema"
-import { ChatterboxVoiceProvider, FakeVoiceProvider, type VoiceProvider } from "@script-video/audio"
+import { KokoroVoiceProvider, FakeVoiceProvider, type VoiceProvider } from "@script-video/audio"
 import { compileScene, makeCaptions, parseNarration, type CaptionCue } from "@script-video/compiler"
 import { resolveVisualAsset } from "@script-video/assets"
 import { prepareRenderRequest } from "@script-video/renderer"
@@ -47,7 +47,8 @@ export async function buildVideo(loaded: LoadedProject, options: BuildOptions = 
   if (!record) { await jsonWrite(validatedPath, project); record = await cache.write("validate", validateKey, {}, [validatedPath]) }
   stageRecords.push(record)
 
-  const provider: VoiceProvider = options.fakeVoice || process.env.VIDEO_FAKE_VOICE === "1" ? new FakeVoiceProvider() : new ChatterboxVoiceProvider()
+  if (!options.fakeVoice && process.env.VIDEO_FAKE_VOICE !== "1" && project.voice.provider !== "kokoro") throw new Error('Use voice.provider="kokoro", voice="af_heart", sampleRate=24000; the old speech provider has been removed.')
+  const provider: VoiceProvider = options.fakeVoice || process.env.VIDEO_FAKE_VOICE === "1" ? new FakeVoiceProvider() : new KokoroVoiceProvider()
   const sceneWords: AlignedWord[][] = []
   const audioPaths: string[] = []
   const voiceKeys: string[] = []

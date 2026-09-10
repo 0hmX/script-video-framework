@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(cd -- "$(dirname -- "$0")/.." && pwd)"
+export HF_HOME="${KOKORO_HF_HOME:-$root/.models/kokoro}"
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+exec "$root/.venv-kokoro/bin/python" "$root/workers/kokoro/worker.py"

@@ -12,7 +12,7 @@ bun run video validate examples/board/video.ts --json
 bun run video inspect examples/board/video.ts
 ```
 
-For a real render, install Python 3, Manim Community, FFmpeg, `tsci`, and a local Chatterbox environment. VHS, Neovim, ttyd, and their capture dependencies are installed under `.tools/` by the local runtime installer; they do not modify the global PATH.
+For a real render, install Python 3, Manim Community, FFmpeg, `tsci`, and a local Kokoro environment. VHS, Neovim, ttyd, and their capture dependencies are installed under `.tools/` by the local runtime installer; they do not modify the global PATH.
 
 ```sh
 bun run video render examples/board/video.ts
@@ -39,3 +39,11 @@ The implementation brief is preserved in [PROJECT_PROMPT.md](./PROJECT_PROMPT.md
 ## Campaigns
 
 Campaign `1` is a [vertical, one-minute Shorts series](./campaigns/1/README.md) that teaches tscircuit by progressively building an RP2040 handheld board.
+
+
+
+## Kokoro narration
+
+Run `scripts/install-kokoro` (requires uv) to install the isolated CPU runtime and download weights. Use `voice: { provider: "kokoro", voice: "af_heart", sampleRate: 24000 }`. The legacy `narrator` voice maps to `af_heart`. Native timestamps drive cue alignment; no separate forced-alignment model is loaded. `scripts/kokoro-check` verifies offline readiness. Builds use cached weights with networking disabled for the model hub. Chatterbox synthesis is removed; old projects must select Kokoro before rerendering. Completed media is preserved.
+
+Validation: `bun run typecheck`, `bun test`, and `python3 -m unittest discover -s workers/kokoro -p "test_*.py"`.

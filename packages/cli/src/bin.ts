@@ -39,9 +39,9 @@ async function doctor() {
     ffmpeg: await commandExists("ffmpeg", ["-version"]), tsci: await commandExists("tsci"),
     vhs: await commandExists(resolve(localTools, "vhs")), nvim: await commandExists(resolve(localTools, "nvim")), ttyd: await commandExists(resolve(localTools, "ttyd")),
     geist: { available: await Bun.file("/Library/Fonts/Geist-Regular.otf").exists() || await Bun.file(`${process.env.HOME}/Library/Fonts/Geist-Regular.otf`).exists(), version: "" },
-    chatterbox: { available: (await Promise.all(["ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt"].map(name => Bun.file(resolve(import.meta.dir, `../../../.models/chatterbox/${name}`)).exists()).concat([Bun.file(resolve(import.meta.dir, "../../../.models/torch/hub/checkpoints/model.pt")).exists()]))).every(Boolean), version: await Bun.file(resolve(import.meta.dir, "../../../.venv-chatterbox/bin/python")).exists() ? "chatterbox-tts 0.1.7 + torchaudio MMS alignment" : "not installed" },
+    kokoro: await commandExists(resolve(import.meta.dir, "../../../scripts/kokoro-check"), []),
   }
-  const ok = checks.bun.available && checks.python.available && checks.manim.available && checks.ffmpeg.available && checks.tsci.available && checks.vhs.available && checks.nvim.available && checks.ttyd.available && checks.chatterbox.available
+  const ok = checks.bun.available && checks.python.available && checks.manim.available && checks.ffmpeg.available && checks.tsci.available && checks.vhs.available && checks.nvim.available && checks.ttyd.available && checks.kokoro.available
   output({ ok, checks }, Object.entries(checks).map(([name, result]) => `${result.available ? "✓" : "✗"} ${name}${result.version ? ` — ${result.version}` : ""}`).join("\n"))
   if (!ok) process.exitCode = 1
 }
@@ -51,7 +51,7 @@ async function inspect(projectPath: string) {
   const cache = new StageCache(resolve(loaded.projectDir, ".video"))
   const scenes = await Promise.all(loaded.project.scenes.map(async scene => {
     const parsed = parseNarration(scene.narration)
-    const voiceKey = contentKey("voice-1", { text: parsed.plainText, voice: loaded.project.voice, provider: fakeVoice ? "fake" : "chatterbox", providerVersion: fakeVoice ? "fake-1" : "chatterbox-jsonl-2" })
+    const voiceKey = contentKey("voice-1", { text: parsed.plainText, voice: loaded.project.voice, provider: fakeVoice ? "fake" : "kokoro", providerVersion: fakeVoice ? "fake-1" : "kokoro-0.9.4-native-alignment-1" })
     const record = await cache.read(`voice-${scene.id}`)
     return { id: scene.id, cues: parsed.cues.map(c => c.name), narration: parsed.plainText, voiceKey, voiceFresh: record?.key === voiceKey && await Promise.all(record.outputs.map(path => Bun.file(path).exists())).then(v => v.every(Boolean)) }
   }))
